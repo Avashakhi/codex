@@ -1,0 +1,6 @@
+The function `add(a, b)` is only returning `a`, ignoring the `b` parameter.  To correctly add `a` and `b`, it should be:
+
+```python
+def add(a, b):
+  return a + b
+```

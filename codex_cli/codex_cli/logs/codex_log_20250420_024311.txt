@@ -1,0 +1,97 @@
+This code provides a framework.  **Do not use this code for live trading without thorough testing and understanding of the risks involved.  Trading involves significant financial risk and you could lose money.**  This example uses simulated trading; adapt it to a real brokerage API at your own risk.
+
+This example uses the `yfinance` library for fetching data and `talib` for technical indicators. You'll need to install them: `pip install yfinance talib`
+
+```python
+import yfinance as yf
+import talib as ta
+import numpy as np
+
+# --- Configuration ---
+SYMBOL = "AAPL"  # Stock symbol
+PERIOD = "1d"  # Data interval (e.g., "1d" for daily, "60m" for 60-minute)
+RSI_PERIOD = 14  # RSI period
+OVERBOUGHT = 70  # RSI overbought level
+OVERSOLD = 30  # RSI oversold level
+INITIAL_CAPITAL = 10000  # Starting capital
+
+# --- Data Fetching ---
+data = yf.download(SYMBOL, period="6mo", interval=PERIOD) #Fetch 6 months of data
+if data.empty:
+    print(f"Error: Could not download data for {SYMBOL}")
+    exit()
+
+# --- RSI Calculation ---
+data["RSI"] = ta.RSI(data["Close"], timeperiod=RSI_PERIOD)
+
+# --- Trading Logic ---
+data["Position"] = 0  # 0: No position, 1: Long, -1: Short (This example only uses Long positions)
+data["Holdings"] = 0
+data["Cash"] = INITIAL_CAPITAL
+
+for i in range(1, len(data)):
+    if data["RSI"][i-1] <= OVERSOLD and data["Position"][i-1] == 0: #Buy signal
+        #Calculate number of shares to buy
+        shares_to_buy = int(data["Cash"][i-1] / data["Close"][i])
+        data["Position"][i] = 1
+        data["Holdings"][i] = shares_to_buy
+        data["Cash"][i] = data["Cash"][i-1] - (shares_to_buy * data["Close"][i])
+
+    elif data["RSI"][i-1] >= OVERBOUGHT and data["Position"][i-1] == 1: #Sell signal
+        data["Position"][i] = 0
+        data["Cash"][i] = data["Cash"][i-1] + (data["Holdings"][i-1] * data["Close"][i])
+        data["Holdings"][i] = 0
+
+    else: #Hold position
+        data["Position"][i] = data["Position"][i-1]
+        data["Holdings"][i] = data["Holdings"][i-1]
+        data["Cash"][i] = data["Cash"][i-1]
+
+
+# --- Performance Evaluation ---
+data["Total_Value"] = data["Cash"] + data["Holdings"] * data["Close"]
+final_value = data["Total_Value"].iloc[-1]
+profit_percentage = ((final_value - INITIAL_CAPITAL) / INITIAL_CAPITAL) * 100
+
+print(f"Final Portfolio Value: ${final_value:.2f}")
+print(f"Profit Percentage: {profit_percentage:.2f}%")
+print(data[["Close", "RSI", "Position", "Holdings", "Cash", "Total_Value"]].tail(10)) #Show last 10 days
+
+# --- Plotting (optional) ---
+import matplotlib.pyplot as plt
+plt.figure(figsize=(12, 6))
+plt.plot(data["Close"], label="Price")
+plt.plot(data["RSI"], label="RSI")
+plt.plot(data["Position"] * 100, label="Position (x100)") # scaled for better visualization
+plt.legend()
+plt.title(f"{SYMBOL} Price and RSI")
+plt.show()
+```
+
+**Explanation:**
+
+1. **Import Libraries:** Imports `yfinance`, `talib`, and `numpy`.
+2. **Configuration:** Sets parameters like the stock symbol, data interval, RSI period, overbought/oversold levels, and initial capital.  **Adjust these values based on your strategy and risk tolerance.**
+3. **Data Fetching:** Downloads historical stock data using `yfinance`.  Error handling is included.
+4. **RSI Calculation:** Calculates the RSI using `talib.RSI`.
+5. **Trading Logic:** This is the core of the bot.  It iterates through the data:
+   - **Buy Signal:** If the RSI is below the oversold level and there's no current position, it buys shares. The number of shares is calculated based on available cash.  A simplified approach is used.  More sophisticated order management is needed for a real trading bot.
+   - **Sell Signal:** If the RSI is above the overbought level and there's a long position, it sells all shares.
+   - **Hold:** Otherwise, it holds the existing position.
+6. **Performance Evaluation:** Calculates the final portfolio value and profit percentage.
+7. **Plotting (Optional):**  Generates a plot showing price, RSI, and position to visualize the trading strategy.
+
+
+**Important Considerations for Real Trading:**
+
+* **Slippage and Commissions:**  Real trading involves slippage (the difference between the expected price and the actual execution price) and commissions.  The simulation ignores these.
+* **Risk Management:** The code lacks robust risk management.  You need stop-loss orders, position sizing strategies, and diversification.
+* **Transaction Costs:**  Include brokerage fees and slippage in your calculations for a more realistic simulation.
+* **Backtesting:**  Thoroughly backtest your strategy on extensive historical data before using it with real money.  Consider different market conditions.
+* **Error Handling:**  Add more robust error handling to deal with network issues, API limitations, and unexpected data.
+* **Real-time Data:** For live trading, you'll need a real-time data feed and a brokerage API.
+* **Order Management:** Implement proper order management to handle order placement, cancellation, and monitoring.
+* **Legal and Regulatory Compliance:** Ensure your bot complies with all relevant laws and regulations.
+
+
+This enhanced example provides a more complete foundation, but remember that building a reliable and profitable trading bot is a complex undertaking.  Start with thorough backtesting and proceed cautiously.  **Never risk more money than you can afford to lose.**

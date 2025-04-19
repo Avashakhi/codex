@@ -1,0 +1,84 @@
+Prompt:
+build a simple trading bot using rsi 20P
+
+Response:
+This solution provides a framework.  **You should NOT use this code for live trading without extensive backtesting and risk management strategies.**  This is for educational purposes only.  Trading involves significant risk, and you could lose money.
+
+This example uses the `yfinance` library to fetch data and `pandas` for data manipulation.  It's a simplified RSI 20 period strategy and lacks crucial elements like order management, error handling, and sophisticated risk management.
+
+```python
+import yfinance as yf
+import pandas as pd
+import talib as ta
+
+# --- Configuration ---
+SYMBOL = "AAPL"  # Replace with your desired ticker symbol
+PERIOD = "1d"  # Data interval (1d, 60m, etc.)
+RSI_PERIOD = 20
+OVERBOUGHT = 70
+OVERSOLD = 30
+INITIAL_CAPITAL = 1000
+
+# --- Data Fetching ---
+data = yf.download(SYMBOL, period="6mo", interval=PERIOD) # Fetch 6 months of data
+
+# --- RSI Calculation ---
+data["RSI"] = ta.RSI(data["Close"], timeperiod=RSI_PERIOD)
+
+# --- Trading Logic ---
+data["Position"] = 0  # Initialize position (0: no position, 1: long, -1: short)
+data["Shares"] = 0    # Number of shares held
+data["Cash"] = INITIAL_CAPITAL # starting capital
+data["Portfolio Value"] = INITIAL_CAPITAL
+
+for i in range(1, len(data)):
+    if data["RSI"][i-1] > OVERBOUGHT and data["RSI"][i] < OVERBOUGHT and data["Position"][i-1] == 0: #oversold to neutral
+        # Buy signal
+        shares_to_buy = int(data["Cash"][i-1] / data["Close"][i])
+        data["Position"][i] = 1
+        data["Shares"][i] = shares_to_buy
+        data["Cash"][i] = data["Cash"][i-1] - shares_to_buy * data["Close"][i]
+
+    elif data["RSI"][i-1] < OVERSOLD and data["RSI"][i] > OVERSOLD and data["Position"][i-1] == 0: #oversold to neutral
+        #Sell Signal (Shorting is not implemented in this simple example)
+        pass #Shorting requires a more complex strategy
+
+    elif data["Position"][i-1] == 1:
+        # Hold position
+        data["Position"][i] = 1
+        data["Shares"][i] = data["Shares"][i-1]
+        data["Cash"][i] = data["Cash"][i-1]
+
+    elif data["Position"][i-1] == -1:
+        #Hold Short position (Not implemented in this simple example)
+        pass
+    else:
+        #No position
+        data["Position"][i] = 0
+        data["Shares"][i] = 0
+        data["Cash"][i] = data["Cash"][i-1]
+
+    #calculate portfolio value
+    data["Portfolio Value"][i] = data["Cash"][i] + data["Shares"][i]*data["Close"][i]
+
+# --- Results ---
+print(data[["Close", "RSI", "Position", "Shares", "Cash", "Portfolio Value"]].tail(10))
+
+
+# --- Plotting (Optional) ---
+#import matplotlib.pyplot as plt
+#plt.figure(figsize=(12, 6))
+#plt.plot(data["Close"], label="Close Price")
+#plt.plot(data["RSI"], label="RSI")
+#plt.legend()
+#plt.show()
+
+```
+
+Before running:
+
+1. **Install Libraries:**  `pip install yfinance pandas talib`
+2. **Replace `SYMBOL`:** Change "AAPL" to the stock ticker you want to trade.
+3. **Understand the Risks:** This is a simplified example. Real-world trading requires much more sophisticated strategies, risk management, and order execution.
+
+Remember to thoroughly backtest this strategy with historical data before considering using it with real money.  This code is for learning purposes only and should not be used for actual trading without significant modifications and risk mitigation.  Consult with a financial advisor before making any investment decisions.

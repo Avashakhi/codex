@@ -1,0 +1,90 @@
+This code simulates a trading bot using the Relative Strength Index (RSI) with a 20-period calculation.  **It's crucial to understand that this is for educational purposes only and should not be used for actual trading without extensive testing and risk management strategies.** Real-world trading involves significant risks and requires careful consideration of various factors beyond a simple RSI indicator.
+
+This example uses the `yfinance` library for fetching data and `pandas` for data manipulation. You'll need to install them: `pip install yfinance pandas`
+
+```python
+import yfinance as yf
+import pandas as pd
+
+# --- Configuration ---
+ticker = "AAPL"  # Replace with your desired ticker symbol
+period = "1y"  # Data period (e.g., "1mo", "3mo", "6mo", "1y", "2y", "5y")
+rsi_period = 20  # RSI period
+overbought = 70  # RSI overbought threshold
+oversold = 30  # RSI oversold threshold
+initial_capital = 10000  # Starting capital
+
+# --- Data Fetching and RSI Calculation ---
+data = yf.download(ticker, period=period)
+data["Delta"] = data["Adj Close"].diff()
+data["Gain"] = data["Delta"].mask(data["Delta"] < 0, 0)
+data["Loss"] = -data["Delta"].mask(data["Delta"] > 0, 0)
+data["AvgGain"] = data["Gain"].rolling(window=rsi_period).mean()
+data["AvgLoss"] = data["Loss"].rolling(window=rsi_period).mean()
+data["RS"] = data["AvgGain"] / data["AvgLoss"]
+data["RSI"] = 100 - (100 / (1 + data["RS"]))
+data.dropna(inplace=True) #remove rows with NaN
+
+
+# --- Trading Logic ---
+position = 0  # 0: no position, 1: long position, -1: short position (simplified - no short selling here)
+portfolio_value = initial_capital
+trades = []
+
+for i in range(1, len(data)):
+    current_price = data["Adj Close"][i]
+    previous_rsi = data["RSI"][i-1]
+    current_rsi = data["RSI"][i]
+
+    # Simple trading strategy (buy/sell signals)
+    if previous_rsi > oversold and current_rsi < oversold : #If RSI crosses below oversold, buy
+        if position == 0:
+            shares_to_buy = portfolio_value // current_price #Buy as many shares as possible
+            position = shares_to_buy
+            portfolio_value -= shares_to_buy * current_price
+            trades.append({"Date": data.index[i], "Action": "Buy", "Price": current_price, "Shares": shares_to_buy})
+
+    elif previous_rsi < overbought and current_rsi > overbought: #If RSI crosses above overbought, sell
+        if position > 0:
+            portfolio_value += position * current_price
+            trades.append({"Date": data.index[i], "Action": "Sell", "Price": current_price, "Shares": position})
+            position = 0
+
+
+    #Update portfolio value after each day (for simplicity, assumes daily closing price)
+    portfolio_value += position * (current_price - data["Adj Close"][i-1])
+
+# --- Results ---
+print("Final Portfolio Value:", portfolio_value)
+print("\nTrades:")
+pd.DataFrame(trades).set_index("Date").to_csv("trades.csv")
+print("Trades saved to trades.csv")
+#print(pd.DataFrame(trades))
+
+data[['Adj Close', 'RSI']].plot(subplots=True, figsize=(12,6))
+```
+
+**Explanation:**
+
+1. **Configuration:** Sets parameters like the ticker symbol, data period, RSI parameters, and initial capital.  Adjust these values to experiment.
+
+2. **Data Fetching:** Uses `yfinance` to download historical adjusted close prices.
+
+3. **RSI Calculation:**  Calculates the RSI using the standard formula. Note the use of `rolling()` for the moving average calculation.
+
+4. **Trading Logic:** This is a simplified trading strategy.  It buys when the RSI crosses below the `oversold` threshold and sells when it crosses above the `overbought` threshold.  **This is a very basic strategy and is likely to generate losses in real trading**.
+
+5. **Results:** Prints the final portfolio value and a list of trades. The trade information is also saved to a CSV file for review.  A plot of the adjusted closing price and the RSI is generated to visualize the trading signals against price action.
+
+
+**Important Considerations (for real-world applications, not just this simulation):**
+
+* **Transaction Costs:** This simulation ignores brokerage fees and commissions, which significantly impact profitability.
+* **Slippage:**  The price you buy or sell at might differ from the expected price.
+* **Risk Management:**  You need robust stop-loss orders and position sizing strategies to limit potential losses.
+* **Overfitting:**  The strategy might perform well on historical data but poorly on future data.  Backtesting on multiple periods and assets is crucial.
+* **Market Conditions:**  Market conditions constantly change. A strategy successful in one period may fail in another.
+* **Diversification:**  Never put all your money into a single stock or strategy.
+
+
+This example provides a starting point.  Building a robust and profitable trading bot requires extensive knowledge of finance, programming, and risk management.  Do not use this code for real trading without thorough testing and understanding of the inherent risks.  Consider consulting with a financial advisor before making any investment decisions.

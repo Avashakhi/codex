@@ -1,0 +1,5 @@
+The code `print('Hello'` is missing a closing parenthesis.  The correct code is:
+
+```python
+print('Hello')
+```

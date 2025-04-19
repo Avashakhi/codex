@@ -1,0 +1,24 @@
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+
+# Egg files
+*.egg
+.eggs/
+
+# Virtualenv or environment folder
+.env/
+
+# Build directories
+dist/
+build/
+
+# Log files
+*.log
+
+# macOS specific
+.DS_Store
+
+# Windows specific
+Thumbs.db
