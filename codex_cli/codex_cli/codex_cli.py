@@ -8,7 +8,7 @@ from PIL import Image
 from dotenv import load_dotenv
 
 # === Configuration ===
-API_KEY = "AIzaSyCqFBx6oipXXFL8GiY4ongMPzUQiGHtWhE"  # REPLACE with your Gemini 2.0 API Key
+API_KEY = "Your api key"  # REPLACE with your Gemini 2.0 API Key
 MODEL_NAME = "models/gemini-1.5-flash-latest"
 LOG_DIR = "logs"
 THEME = "dark"  # or "light"
